@@ -7,12 +7,24 @@ const noteCount = document.querySelector("#note-count");
 const errorMessage = document.querySelector("#error-message");
 const searchInput = document.querySelector("#search-input");
 
+const STORAGE_KEY = "quicknotes-notes";
+
 let notes = [];
+
+function saveNotes() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+}
 
 function render() {
     notesList.replaceChildren();
 
-    notes.forEach((note) => {
+    const searchTerm = searchInput.value.trim().toLowerCase();
+
+    const filteredNotes = notes.filter((note) =>
+        note.text.toLowerCase().includes(searchTerm)
+    );
+
+    filteredNotes.forEach((note) => {
         const li = document.createElement("li");
         li.classList.add(
             `category-${note.category.toLowerCase()}`
@@ -36,12 +48,19 @@ function render() {
 
         deleteButton.addEventListener("click", () => {
             notes = notes.filter((item) => item.id !== note.id);
+            saveNotes();
             render();
         });
 
         li.append(categoryLabel, noteText, date, deleteButton);
         notesList.appendChild(li);
     });
+
+    if (searchTerm !== "" && filteredNotes.length === 0) {
+        const message = document.createElement("li");
+        message.textContent = "No notes match your search.";
+        notesList.appendChild(message);
+    }
 
     if (notes.length === 0) {
         noteCount.textContent = "You have no notes yet.";
@@ -69,17 +88,34 @@ form.addEventListener("submit", (event) => {
     }
 
     const note = {
-        id: Date.now().toString(),
+        id: `${Date.now()}-${Math.random()}`,
         text: text,
         category: noteCategory.value,
         createdAt: new Date().toLocaleString()
     };
 
     notes.push(note);
+    saveNotes();
+
     noteInput.value = "";
     errorMessage.textContent = "";
 
     render();
 });
 
-render();
+searchInput.addEventListener("input", render);
+
+function loadNotes() {
+    try {
+        const savedNotes = localStorage.getItem(STORAGE_KEY);
+        const parsedNotes = savedNotes ? JSON.parse(savedNotes) : [];
+
+        notes = Array.isArray(parsedNotes) ? parsedNotes : [];
+    } catch (error) {
+        notes = [];
+    }
+
+    render();
+}
+
+loadNotes();
